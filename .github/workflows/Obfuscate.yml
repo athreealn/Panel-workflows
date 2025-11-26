@@ -5,8 +5,7 @@ on:
     branches:
       - main
   schedule:
-        # Runs everyday at 1:00 AM
-        - cron: "0 1 * * *"
+    - cron: "0 1 * * *"
 
 permissions:
   contents: write
@@ -22,32 +21,94 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "latest"
+          node-version: "18"
+          cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install obfuscator globally
         run: |
           npm install -g javascript-obfuscator
 
-      - name: Clone BPB workjs
+      - name: Clone and build BPB source
         run: |
-          # 修正后的URL - 移除了 /refs/heads
-          wget -O origin.js https://raw.githubusercontent.com/bia-pain-bache/BPB-Worker-Panel/main/build/unobfuscated-worker.js
-      
+          # 克隆源仓库
+          git clone https://github.com/bia-pain-bache/BPB-Worker-Panel.git bpb-source
+          cd bpb-source
+          
+          # 安装依赖
+          echo "正在安装依赖..."
+          npm install
+          
+          # 构建项目
+          echo "正在构建项目..."
+          npm run build
+          
+          # 查找构建生成的JS文件
+          echo "查找构建文件..."
+          find . -name "*.js" -type f | grep -v node_modules | head -10
+          
+          # 检查常见的输出目录
+          echo "检查构建输出目录..."
+          ls -la build/ 2>/dev/null || echo "build目录不存在"
+          ls -la dist/ 2>/dev/null || echo "dist目录不存在"
+          ls -la lib/ 2>/dev/null || echo "lib目录不存在"
+          
+          # 复制主要的JS文件（根据实际情况调整）
+          if [ -f "./build/worker.js" ]; then
+            cp ./build/worker.js ../origin.js
+            echo "使用 build/worker.js"
+          elif [ -f "./dist/worker.js" ]; then
+            cp ./dist/worker.js ../origin.js
+            echo "使用 dist/worker.js"
+          elif [ -f "./dist/index.js" ]; then
+            cp ./dist/index.js ../origin.js
+            echo "使用 dist/index.js"
+          elif [ -f "./lib/index.js" ]; then
+            cp ./lib/index.js ../origin.js
+            echo "使用 lib/index.js"
+          else
+            # 如果标准目录没有，查找第一个主要的JS文件
+            echo "尝试查找主要JS文件..."
+            MAIN_JS=$(find . -name "*.js" -type f | grep -v node_modules | grep -v test | head -1)
+            if [ -n "$MAIN_JS" ]; then
+              cp "$MAIN_JS" ../origin.js
+              echo "使用: $MAIN_JS"
+            else
+              echo "错误：找不到JavaScript文件"
+              ls -la
+              exit 1
+            fi
+          fi
+
+      - name: Check if origin.js exists
+        run: |
+          if [ -f "origin.js" ]; then
+            echo "✅ origin.js 文件已找到，文件大小: $(wc -l < origin.js) 行"
+            head -5 origin.js
+          else
+            echo "❌ origin.js 文件不存在"
+            exit 1
+          fi
+
       - name: Obfuscate BPB worker js
         run: |
           javascript-obfuscator origin.js --output _worker.js \
-          --compact true \
-          --control-flow-flattening true \
-          --control-flow-flattening-threshold 1 \
-          --dead-code-injection true \
-          --dead-code-injection-threshold 1 \
-          --identifier-names-generator hexadecimal \
-          --rename-globals true \
-          --string-array true \
-          --string-array-encoding 'rc4' \
-          --string-array-threshold 1 \
-          --transform-object-keys true \
-          --unicode-escape-sequence true
+            --compact true \
+            --control-flow-flattening true \
+            --control-flow-flattening-threshold 0.75 \
+            --dead-code-injection true \
+            --dead-code-injection-threshold 0.4 \
+            --identifier-names-generator hexadecimal \
+            --rename-globals true \
+            --string-array true \
+            --string-array-encoding 'rc4' \
+            --string-array-threshold 0.75 \
+            --transform-object-keys true \
+            --unicode-escape-sequence true
+
+      - name: List generated files
+        run: |
+          ls -la
+          echo "生成的 _worker.js 文件大小: $(wc -c < _worker.js) 字节"
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -55,4 +116,3 @@ jobs:
           branch: main
           commit_message: ':arrow_up: update latest bpb panel'
           commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
-          push_options: '--set-upstream'

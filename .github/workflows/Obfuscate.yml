@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  schedule:
-        # Runs everyday at 1:00 AM
-        - cron: "0 1 * * *"
 
 permissions:
   contents: write
@@ -24,17 +21,13 @@ jobs:
         with:
           node-version: "latest"
 
-      - name: Install dependencies
+      - name: Install javascript-obfuscator
         run: |
           npm install -g javascript-obfuscator
 
-      - name: Copy source file for obfuscation
-        run: |
-          cp build/unobfuscated-worker.js origin.js
-      
       - name: Obfuscate BPB worker js
         run: |
-          javascript-obfuscator origin.js --output _worker.js \
+          javascript-obfuscator build/unobfuscated-worker.js --output _worker.js \
           --compact true \
           --control-flow-flattening true \
           --control-flow-flattening-threshold 1 \
@@ -48,13 +41,8 @@ jobs:
           --transform-object-keys true \
           --unicode-escape-sequence true
 
-      - name: Clean up temporary file
-        run: |
-          rm origin.js
-
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           branch: main
           commit_message: ':arrow_up: update latest bpb panel'
-          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'

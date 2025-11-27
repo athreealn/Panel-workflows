@@ -40,7 +40,6 @@ jobs:
           --log false \
           --numbers-to-expressions true \
           --rename-globals true \
-          --rotate-string-array true \
           --self-defending true \
           --shuffle-string-array true \
           --split-strings true \

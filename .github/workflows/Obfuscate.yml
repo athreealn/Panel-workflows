@@ -25,6 +25,10 @@ jobs:
         run: |
           npm install -g javascript-obfuscator
 
+      - name: Check javascript-obfuscator version
+        run: |
+          javascript-obfuscator --version
+
       - name: Obfuscate BPB worker js
         run: |
           javascript-obfuscator build/unobfuscated-worker.js --output _worker.js \
@@ -33,20 +37,13 @@ jobs:
           --control-flow-flattening-threshold 0.8 \
           --dead-code-injection true \
           --dead-code-injection-threshold 0.4 \
-          --debug-protection true \
-          --debug-protection-interval 1000 \
-          --disable-console-output true \
           --identifier-names-generator hexadecimal \
-          --log false \
-          --numbers-to-expressions true \
           --rename-globals true \
           --self-defending true \
-          --shuffle-string-array true \
           --split-strings true \
           --split-strings-chunk-length 10 \
           --string-array true \
           --string-array-encoding 'rc4' \
-          --string-array-indexes-type hexadecimal \
           --string-array-threshold 0.75 \
           --transform-object-keys true \
           --unicode-escape-sequence true

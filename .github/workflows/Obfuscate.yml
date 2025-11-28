@@ -1,4 +1,4 @@
-name: Build Obfuscate BPB Panel
+name: Build Minify BPB Panel
 
 on:
   push:
@@ -21,32 +21,16 @@ jobs:
         with:
           node-version: "latest"
 
-      - name: Install javascript-obfuscator
+      - name: Install terser
         run: |
-          npm install -g javascript-obfuscator
+          npm install -g terser
 
-      - name: Check javascript-obfuscator version
+      - name: Minify BPB worker js
         run: |
-          javascript-obfuscator --version
-
-      - name: Obfuscate BPB worker js
-        run: |
-          javascript-obfuscator build/unobfuscated-worker.js --output _worker.js \
-          --compact true \
-          --control-flow-flattening true \
-          --control-flow-flattening-threshold 0.8 \
-          --dead-code-injection true \
-          --dead-code-injection-threshold 0.4 \
-          --identifier-names-generator hexadecimal \
-          --rename-globals true \
-          --self-defending true \
-          --split-strings true \
-          --split-strings-chunk-length 10 \
-          --string-array true \
-          --string-array-encoding 'rc4' \
-          --string-array-threshold 0.75 \
-          --transform-object-keys true \
-          --unicode-escape-sequence true
+          terser build/unobfuscated-worker.js --output _worker.js \
+            --compress \
+            --mangle \
+            --comments false
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
